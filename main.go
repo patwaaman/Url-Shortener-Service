@@ -3,24 +3,23 @@ package main
 import (
 	"context"
 	"log"
-	"net"
+	// "net/url"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/yourusername/url-shortener/internal/analytics"
-	"github.com/yourusername/url-shortener/internal/auth"
-	"github.com/yourusername/url-shortener/internal/cache"
-	"github.com/yourusername/url-shortener/internal/config"
-	"github.com/yourusername/url-shortener/internal/database"
-	httpserver "github.com/yourusername/url-shortener/internal/http"
-	grpcserver "github.com/yourusername/url-shortener/internal/grpc"
-	"github.com/yourusername/url-shortener/internal/url"
-
-	pb "github.com/yourusername/url-shortener/proto"
-	"google.golang.org/grpc"
+	"url-shortener/internal/analytics"
+	"url-shortener/internal/auth"
+	"url-shortener/internal/cache"
+	"url-shortener/internal/config"
+	"url-shortener/internal/database"
+	httpserver "url-shortener/internal/http"
+	urlshortner "url-shortener/internal/urlshortener"
+	// grpcserver "url-shortener/internal/grpc"
+	// pb "url-shortener/proto"
+	// "google.golang.org/grpc"
 )
 
 func main() {
@@ -30,13 +29,13 @@ func main() {
 	redisClient := cache.NewRedis(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
 	defer redisClient.Close()
 
-	// AutoMigrate
-	if err := db.AutoMigrate(&url.URL{}, &url.ClickStat{}); err != nil {
-		log.Fatalf("failed to migrate: %v", err)
-	}
+	// // AutoMigrate
+	// if err := db.AutoMigrate(&url.URL{}, &url.ClickStat{}); err != nil {
+	// 	log.Fatalf("failed to migrate: %v", err)
+	// }
 
-	urlRepo := url.NewRepository(db)
-	urlSvc := url.NewService(urlRepo, redisClient)
+	urlRepo := urlshortner.NewRepository(db)
+	urlSvc := urlshortner.NewService(urlRepo, redisClient)
 	analyticsSvc := analytics.NewService(db)
 	jwtMgr := auth.NewJWTManager(cfg.AdminJWTSecret, 24*time.Hour)
 
@@ -51,10 +50,10 @@ func main() {
 		IdleTimeout:  cfg.IdleTimeout,
 	}
 
-	// gRPC server
-	grpcSrv := grpc.NewServer()
-	grpcHandler := grpcserver.NewServer(urlSvc, cfg.BaseURL)
-	pb.RegisterURLShortenerServer(grpcSrv, grpcHandler)
+	// // gRPC server
+	// grpcSrv := grpc.NewServer()
+	// grpcHandler := grpcserver.NewServer(urlSvc, cfg.BaseURL)
+	// pb.RegisterURLShortenerServer(grpcSrv, grpcHandler)
 
 	// Start HTTP
 	go func() {
@@ -64,17 +63,17 @@ func main() {
 		}
 	}()
 
-	// Start gRPC
-	go func() {
-		lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
-		if err != nil {
-			log.Fatalf("failed to listen for gRPC: %v", err)
-		}
-		log.Printf("gRPC server listening on :%s", cfg.GRPCPort)
-		if err := grpcSrv.Serve(lis); err != nil {
-			log.Fatalf("grpc server error: %v", err)
-		}
-	}()
+	// // Start gRPC
+	// go func() {
+	// 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
+	// 	if err != nil {
+	// 		log.Fatalf("failed to listen for gRPC: %v", err)
+	// 	}
+	// 	log.Printf("gRPC server listening on :%s", cfg.GRPCPort)
+	// 	if err := grpcSrv.Serve(lis); err != nil {
+	// 		log.Fatalf("grpc server error: %v", err)
+	// 	}
+	// }()
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
@@ -89,7 +88,7 @@ func main() {
 	if err := httpSrv.Shutdown(ctx); err != nil {
 		log.Printf("http shutdown error: %v", err)
 	}
-	grpcSrv.GracefulStop()
+	// grpcSrv.GracefulStop()
 
 	log.Println("servers stopped")
 }

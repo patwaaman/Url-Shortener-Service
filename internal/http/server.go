@@ -4,13 +4,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yourusername/url-shortener/internal/analytics"
-	"github.com/yourusername/url-shortener/internal/auth"
-	"github.com/yourusername/url-shortener/internal/url"
+	"url-shortener/internal/analytics"
+	"url-shortener/internal/auth"
+	"url-shortener/internal/urlshortener"
 )
 
 func NewRouter(
-	urlSvc url.Service,
+	urlSvc urlshortener.Service,
 	baseURL string,
 	analyticsSvc analytics.Service,
 	jwtMgr *auth.JWTManager,

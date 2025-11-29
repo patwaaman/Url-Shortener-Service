@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/yourusername/url-shortener/internal/url"
 	"gorm.io/gorm"
+	"url-shortener/internal/model"
 )
 
 type DailyClicks struct {
@@ -35,7 +35,7 @@ func (s *service) GetDailyClicks(ctx context.Context, from, to time.Time) ([]Dai
 	}
 
 	err := s.db.WithContext(ctx).
-		Model(&url.ClickStat{}).
+		Model(&model.ClickStat{}).
 		Select("date, SUM(count) as count").
 		Where("date BETWEEN ? AND ?", from, to).
 		Group("date").

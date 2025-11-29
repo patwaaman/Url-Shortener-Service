@@ -1,4 +1,4 @@
-package url
+package model
 
 import (
 	"time"

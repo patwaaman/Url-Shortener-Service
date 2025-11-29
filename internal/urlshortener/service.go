@@ -1,4 +1,4 @@
-package url
+package urlshortener
 
 import (
 	"context"
@@ -9,21 +9,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patwaaman/url-shortener/internal/cache"
+	"url-shortener/internal/cache"
+	"url-shortener/internal/model"
 )
 
 var ErrInvalidURL = errors.New("invalid url")
 
 type Service interface {
-	Shorten(ctx context.Context, original, customAlias string) (*URL, error)
-	Resolve(ctx context.Context, code string) (*URL, error)
-	List(ctx context.Context, page, pageSize int) ([]URL, int64, error)
+	Shorten(ctx context.Context, original, customAlias string) (*model.URL, error)
+	Resolve(ctx context.Context, code string) (*model.URL, error)
+	List(ctx context.Context, page, pageSize int) ([]model.URL, int64, error)
 }
 
 type service struct {
-	repo      Repository
-	cache     *cache.RedisClient
-	cacheTTL  time.Duration
+	repo     Repository
+	cache    *cache.RedisClient
+	cacheTTL time.Duration
 }
 
 func NewService(repo Repository, cacheClient *cache.RedisClient) Service {
@@ -34,7 +35,7 @@ func NewService(repo Repository, cacheClient *cache.RedisClient) Service {
 	}
 }
 
-func (s *service) Shorten(ctx context.Context, original, customAlias string) (*URL, error) {
+func (s *service) Shorten(ctx context.Context, original, customAlias string) (*model.URL, error) {
 	normalized, err := normalizeURL(original)
 	if err != nil {
 		return nil, ErrInvalidURL
@@ -54,7 +55,7 @@ func (s *service) Shorten(ctx context.Context, original, customAlias string) (*U
 		code = generateShortCode(normalized)
 	}
 
-	u := &URL{
+	u := &model.URL{
 		ShortCode:   code,
 		OriginalURL: normalized,
 	}
@@ -71,7 +72,7 @@ func (s *service) Shorten(ctx context.Context, original, customAlias string) (*U
 	return u, nil
 }
 
-func (s *service) Resolve(ctx context.Context, code string) (*URL, error) {
+func (s *service) Resolve(ctx context.Context, code string) (*model.URL, error) {
 	// 1. try redis
 	if s.cache != nil {
 		if orig, err := s.cache.GetURL(ctx, code); err == nil && orig != "" {
@@ -94,7 +95,7 @@ func (s *service) Resolve(ctx context.Context, code string) (*URL, error) {
 	return u, nil
 }
 
-func (s *service) List(ctx context.Context, page, pageSize int) ([]URL, int64, error) {
+func (s *service) List(ctx context.Context, page, pageSize int) ([]model.URL, int64, error) {
 	return s.repo.List(ctx, page, pageSize)
 }
 

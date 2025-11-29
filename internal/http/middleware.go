@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -10,8 +11,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/yourusername/url-shortener/internal/auth"
 	"golang.org/x/time/rate"
+	"url-shortener/internal/auth"
 )
 
 type RateLimiter struct {
@@ -67,20 +68,34 @@ func LoggingMiddleware() gin.HandlerFunc {
 
 func AdminAuthMiddleware(jwtMgr *auth.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		h := c.GetHeader("Authorization")
-		if h == "" || !strings.HasPrefix(h, "Bearer ") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing token"})
+		authHeader := c.GetHeader("Authorization")
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing bearer token"})
+			c.Abort()
 			return
 		}
-		tokenStr := strings.TrimPrefix(h, "Bearer ")
+
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+
 		claims, err := jwtMgr.VerifyAdminToken(tokenStr)
 		if err != nil {
-			if ve, ok := err.(*jwt.ValidationError); ok {
-				log.Printf("jwt validation error: %v", ve)
+
+			msg := "invalid token"
+
+			switch {
+			case errors.Is(err, jwt.ErrTokenExpired):
+				msg = "token expired"
+			case errors.Is(err, jwt.ErrTokenMalformed):
+				msg = "malformed token"
+			case errors.Is(err, jwt.ErrTokenSignatureInvalid):
+				msg = "invalid signature"
 			}
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+
+			c.JSON(http.StatusUnauthorized, gin.H{"error": msg})
+			c.Abort()
 			return
 		}
+
 		c.Set("admin_username", claims.Username)
 		c.Next()
 	}
