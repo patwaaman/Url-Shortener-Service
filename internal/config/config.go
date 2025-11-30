@@ -10,7 +10,6 @@ import (
 type Config struct {
 	AppEnv      string
 	HTTPPort    string
-	GRPCPort    string
 	BaseURL     string
 	DatabaseURL string
 
@@ -34,7 +33,6 @@ func Load() *Config {
 	return &Config{
 		AppEnv:         getEnv("APP_ENV", "development"),
 		HTTPPort:       getEnv("HTTP_PORT", "8080"),
-		GRPCPort:       getEnv("GRPC_PORT", "9090"),
 		BaseURL:        getEnv("BASE_URL", "http://localhost:8080"),
 		DatabaseURL:    mustEnv("DATABASE_URL"),
 		RedisAddr:      getEnv("REDIS_ADDR", "redis:6379"),
