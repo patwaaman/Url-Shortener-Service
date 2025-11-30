@@ -1,5 +1,5 @@
 ## 🚀 URL Shortener Service
-Go + Gin + GORM + PostgreSQL + Redis + JWT + gRPC
+Go + Gin + GORM + PostgreSQL + Redis + JWT
 
 A production-ready URL Shortener backend built with scalable architecture, clean layers, and Dockerized deployment.
 
