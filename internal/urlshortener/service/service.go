@@ -83,7 +83,7 @@ func (s *service) Resolve(ctx context.Context, code string) (*model.URL, error) 
 	if s.cache != nil {
 		if orig, err := s.cache.GetURL(ctx, code); err == nil && orig != "" {
 
-			// Fire-and-forget DB stats update in background
+			// DB stats update in background
 			go func() {
 				if dbURL, err := s.repo.FindByShortCode(context.Background(), code); err == nil {
 					_ = s.repo.IncrementClick(context.Background(), dbURL.ID)
@@ -91,7 +91,6 @@ func (s *service) Resolve(ctx context.Context, code string) (*model.URL, error) 
 				}
 			}()
 
-			// Return immediately (fast)
 			return &model.URL{
 				ShortCode:   code,
 				OriginalURL: orig,
@@ -105,14 +104,14 @@ func (s *service) Resolve(ctx context.Context, code string) (*model.URL, error) 
 		return nil, err
 	}
 
-	// Store in Redis for next time
+	// update redis cache
 	if s.cache != nil {
 		if err := s.cache.SetURL(ctx, u.ShortCode, u.OriginalURL, s.cacheTTL); err != nil {
 			s.log.Warn("failed to cache url:", zap.Error(err))
 		}
 	}
 
-	// Fire-and-forget stats
+	// DB stats update in background
 	go func(id uint) {
 		_ = s.repo.IncrementClick(context.Background(), id)
 		_ = s.repo.UpsertClickStat(context.Background(), id, time.Now().UTC())

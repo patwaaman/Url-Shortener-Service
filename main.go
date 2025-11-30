@@ -21,9 +21,6 @@ import (
 	"url-shortener/internal/urlshortener/service"
 
 	"go.uber.org/zap"
-	// grpcserver "url-shortener/internal/grpc"
-	// pb "url-shortener/proto"
-	// "google.golang.org/grpc"
 )
 
 func main() {
@@ -60,11 +57,6 @@ func main() {
 		IdleTimeout:  cfg.IdleTimeout,
 	}
 
-	// // gRPC server
-	// grpcSrv := grpc.NewServer()
-	// grpcHandler := grpcserver.NewServer(urlSvc, cfg.BaseURL)
-	// pb.RegisterURLShortenerServer(grpcSrv, grpcHandler)
-
 	// Start HTTP
 	go func() {
 		log.Printf("HTTP server listening on :%s", cfg.HTTPPort)
@@ -72,18 +64,6 @@ func main() {
 			log.Fatalf("http server error: %v", err)
 		}
 	}()
-
-	// // Start gRPC
-	// go func() {
-	// 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
-	// 	if err != nil {
-	// 		log.Fatalf("failed to listen for gRPC: %v", err)
-	// 	}
-	// 	log.Printf("gRPC server listening on :%s", cfg.GRPCPort)
-	// 	if err := grpcSrv.Serve(lis); err != nil {
-	// 		log.Fatalf("grpc server error: %v", err)
-	// 	}
-	// }()
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
@@ -98,7 +78,6 @@ func main() {
 	if err := httpSrv.Shutdown(ctx); err != nil {
 		log.Printf("http shutdown error: %v", err)
 	}
-	// grpcSrv.GracefulStop()
 
 	log.Println("servers stopped")
 }

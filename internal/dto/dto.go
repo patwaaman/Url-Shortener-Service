@@ -17,3 +17,8 @@ type DailyClicks struct {
 	Date  time.Time `json:"date"`
 	Count uint64    `json:"count"`
 }
+
+type LoginReq struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}

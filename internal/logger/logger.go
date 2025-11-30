@@ -13,7 +13,7 @@ func Init(env string) {
 	if env == "production" {
 		Log, err = zap.NewProduction()
 	} else {
-		Log, err = zap.NewDevelopment() // colorized, human-friendly
+		Log, err = zap.NewDevelopment()
 	}
 
 	if err != nil {

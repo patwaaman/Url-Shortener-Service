@@ -12,8 +12,8 @@ import (
 )
 
 func NewPostgres(dsn string) *gorm.DB {
-	// Set GORM log level (warn by default)
 	gormConfig := &gorm.Config{
+		// GORM log level : warn
 		Logger: gormLogger.Default.LogMode(gormLogger.Warn),
 	}
 

@@ -13,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/time/rate"
 	"url-shortener/internal/auth"
+	errconst "url-shortener/internal/error"
 )
 
 type RateLimiter struct {
@@ -47,7 +48,7 @@ func RateLimitMiddleware(rl *RateLimiter) gin.HandlerFunc {
 		limiter := rl.getLimiter(ip)
 		if !limiter.Allow() {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error": "rate limit exceeded",
+				"error": errconst.ErrRateLimitExceed.Error(),
 			})
 			return
 		}
@@ -70,7 +71,7 @@ func AdminAuthMiddleware(jwtMgr *auth.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if !strings.HasPrefix(authHeader, "Bearer ") {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing bearer token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": errconst.ErrMissingToken.Error()})
 			c.Abort()
 			return
 		}
@@ -80,17 +81,7 @@ func AdminAuthMiddleware(jwtMgr *auth.JWTManager) gin.HandlerFunc {
 		claims, err := jwtMgr.VerifyAdminToken(tokenStr)
 		if err != nil {
 
-			msg := "invalid token"
-
-			switch {
-			case errors.Is(err, jwt.ErrTokenExpired):
-				msg = "token expired"
-			case errors.Is(err, jwt.ErrTokenMalformed):
-				msg = "malformed token"
-			case errors.Is(err, jwt.ErrTokenSignatureInvalid):
-				msg = "invalid signature"
-			}
-
+			msg := JWTMessage(err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": msg})
 			c.Abort()
 			return
@@ -111,4 +102,17 @@ func clientIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
+}
+
+func JWTMessage(err error) string {
+	switch {
+	case errors.Is(err, jwt.ErrTokenExpired):
+		return errconst.ErrTokenExpired.Error()
+	case errors.Is(err, jwt.ErrTokenMalformed):
+		return errconst.ErrTokenMalformed.Error()
+	case errors.Is(err, jwt.ErrTokenSignatureInvalid):
+		return errconst.ErrTokenSignature.Error()
+	default:
+		return errconst.ErrTokenInvalid.Error()
+	}
 }

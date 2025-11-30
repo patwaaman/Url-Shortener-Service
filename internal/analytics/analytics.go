@@ -11,10 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type Service interface {
-	GetDailyClicks(ctx context.Context, from, to time.Time) ([]dto.DailyClicks, error)
-}
-
 type service struct {
 	db  *gorm.DB
 	log *zap.Logger
