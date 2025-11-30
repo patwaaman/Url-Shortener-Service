@@ -4,11 +4,13 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
 )
 
 type JWTManager struct {
 	secretKey     string
 	tokenDuration time.Duration
+	log           *zap.Logger
 }
 
 type AdminClaims struct {
@@ -16,10 +18,11 @@ type AdminClaims struct {
 	jwt.RegisteredClaims
 }
 
-func NewJWTManager(secret string, duration time.Duration) *JWTManager {
+func NewJWTManager(secret string, duration time.Duration, log *zap.Logger) *JWTManager {
 	return &JWTManager{
 		secretKey:     secret,
 		tokenDuration: duration,
+		log:           log,
 	}
 }
 

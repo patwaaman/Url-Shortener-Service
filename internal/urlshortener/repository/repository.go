@@ -1,38 +1,29 @@
-package urlshortener
+package repository
 
 import (
 	"context"
 	"errors"
-	"time"
-	"url-shortener/internal/model"
-
+	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"time"
+	errconst "url-shortener/internal/error"
+	"url-shortener/internal/model"
 )
 
-var ErrNotFound = errors.New("url not found")
-
-type Repository interface {
-	FindByShortCode(ctx context.Context, code string) (*model.URL, error)
-	FindByOriginalURL(ctx context.Context, original string) (*model.URL, error)
-	Create(ctx context.Context, u *model.URL) error
-	IncrementClick(ctx context.Context, id uint) error
-	UpsertClickStat(ctx context.Context, urlID uint, day time.Time) error
-	List(ctx context.Context, page, pageSize int) ([]model.URL, int64, error)
-}
-
 type GormRepository struct {
-	db *gorm.DB
+	db  *gorm.DB
+	log *zap.Logger
 }
 
-func NewRepository(db *gorm.DB) Repository {
-	return &GormRepository{db: db}
+func NewRepository(db *gorm.DB, log *zap.Logger) Repository {
+	return &GormRepository{db: db, log: log}
 }
 
 func (r *GormRepository) FindByShortCode(ctx context.Context, code string) (*model.URL, error) {
 	var u model.URL
 	if err := r.db.WithContext(ctx).Where("short_code = ?", code).First(&u).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrNotFound
+			return nil, errconst.ErrNotFound
 		}
 		return nil, err
 	}
@@ -43,7 +34,7 @@ func (r *GormRepository) FindByOriginalURL(ctx context.Context, original string)
 	var u model.URL
 	if err := r.db.WithContext(ctx).Where("original_url = ?", original).First(&u).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrNotFound
+			return nil, errconst.ErrNotFound
 		}
 		return nil, err
 	}

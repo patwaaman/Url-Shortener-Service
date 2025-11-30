@@ -1,54 +1,52 @@
-package urlshortener
+package service
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"url-shortener/internal/cache"
+	errconst "url-shortener/internal/error"
 	"url-shortener/internal/model"
+	"url-shortener/internal/urlshortener/helper"
+	"url-shortener/internal/urlshortener/repository"
+
+	"go.uber.org/zap"
 )
 
-var ErrInvalidURL = errors.New("invalid url")
-
-type Service interface {
-	Shorten(ctx context.Context, original, customAlias string) (*model.URL, error)
-	Resolve(ctx context.Context, code string) (*model.URL, error)
-	List(ctx context.Context, page, pageSize int) ([]model.URL, int64, error)
-}
-
 type service struct {
-	repo     Repository
+	repo     repository.Repository
 	cache    *cache.RedisClient
 	cacheTTL time.Duration
+	log      *zap.Logger
 }
 
-func NewService(repo Repository, cacheClient *cache.RedisClient) Service {
+func NewService(repo repository.Repository, cacheClient *cache.RedisClient, log *zap.Logger) Service {
 	return &service{
 		repo:     repo,
 		cache:    cacheClient,
 		cacheTTL: 24 * time.Hour,
+		log:      log,
 	}
 }
 
 func (s *service) Shorten(ctx context.Context, original, customAlias string) (*model.URL, error) {
-	normalized, err := normalizeURL(original)
+	normalized, err := helper.NormalizeURL(original)
 	if err != nil {
-		return nil, ErrInvalidURL
+		return nil, errconst.ErrInvalidURL
 	}
 
 	// idempotent: same URL -> same record
 	if existing, err := s.repo.FindByOriginalURL(ctx, normalized); err == nil {
 		return existing, nil
-	} else if err != ErrNotFound {
+	} else if err != errconst.ErrNotFound {
 		return nil, err
 	}
 
 	var code string
 	if customAlias != "" {
-		code = sanitizeAlias(customAlias)
+		code = helper.SanitizeAlias(customAlias)
 	} else {
-		code = generateShortCode(normalized)
+		code = helper.GenerateShortCode(normalized)
 	}
 
 	u := &model.URL{

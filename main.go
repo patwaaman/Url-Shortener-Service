@@ -17,7 +17,8 @@ import (
 	httpserver "url-shortener/internal/http"
 	"url-shortener/internal/logger"
 	"url-shortener/internal/model"
-	urlshortner "url-shortener/internal/urlshortener"
+	"url-shortener/internal/urlshortener/repository"
+	"url-shortener/internal/urlshortener/service"
 
 	"go.uber.org/zap"
 	// grpcserver "url-shortener/internal/grpc"
@@ -43,10 +44,10 @@ func main() {
 		log.Fatalf("failed to migrate: %v", err)
 	}
 
-	urlRepo := urlshortner.NewRepository(db)
-	urlSvc := urlshortner.NewService(urlRepo, redisClient)
-	analyticsSvc := analytics.NewService(db)
-	jwtMgr := auth.NewJWTManager(cfg.AdminJWTSecret, 24*time.Hour)
+	urlRepo := repository.NewRepository(db, logger.Log.Named("url-repo"))
+	urlSvc := service.NewService(urlRepo, redisClient, logger.Log.Named("url-service"))
+	analyticsSvc := analytics.NewService(db, logger.Log.Named("analytics-service"))
+	jwtMgr := auth.NewJWTManager(cfg.AdminJWTSecret, 24*time.Hour, logger.Log.Named("auth"))
 
 	rl := httpserver.NewRateLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
 	router := httpserver.NewRouter(urlSvc, cfg.BaseURL, analyticsSvc, jwtMgr, cfg.AdminUser, cfg.AdminPassword, rl)

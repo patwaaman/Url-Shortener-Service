@@ -3,8 +3,10 @@ package httpserver
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"url-shortener/internal/auth"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type loginReq struct {
@@ -16,16 +18,17 @@ type AdminHandler struct {
 	adminUser     string
 	adminPassword string
 	jwtMgr        *auth.JWTManager
+	log           *zap.Logger
 }
 
-func NewAdminHandler(adminUser, adminPassword string, jwtMgr *auth.JWTManager) *AdminHandler {
+func NewAdminHandler(adminUser, adminPassword string, jwtMgr *auth.JWTManager, log *zap.Logger) *AdminHandler {
 	return &AdminHandler{
 		adminUser:     adminUser,
 		adminPassword: adminPassword,
 		jwtMgr:        jwtMgr,
+		log:           log,
 	}
 }
-
 
 func (h *AdminHandler) Login(c *gin.Context) {
 	var req loginReq

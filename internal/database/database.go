@@ -46,4 +46,3 @@ func NewPostgres(dsn string) *gorm.DB {
 
 	return db
 }
-

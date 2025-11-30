@@ -1,37 +1,38 @@
-package urlshortener
+package helper
 
 import (
 	"crypto/sha256"
 	"encoding/base64"
 	"net/url"
 	"strings"
+	errconst "url-shortener/internal/error"
 )
 
-func normalizeURL(u string) (string, error) {
+func NormalizeURL(u string) (string, error) {
 	u = strings.TrimSpace(u)
 	if u == "" {
-		return "", ErrInvalidURL
+		return "", errconst.ErrInvalidURL
 	}
 	parsed, err := url.Parse(u)
 	if err != nil {
-		return "", ErrInvalidURL
+		return "", errconst.ErrInvalidURL
 	}
 	if parsed.Scheme == "" {
 		parsed.Scheme = "https"
 	}
 	if parsed.Host == "" {
-		return "", ErrInvalidURL
+		return "", errconst.ErrInvalidURL
 	}
 	return parsed.String(), nil
 }
 
-func sanitizeAlias(a string) string {
+func SanitizeAlias(a string) string {
 	a = strings.TrimSpace(a)
 	a = strings.Trim(a, "/")
 	return a
 }
 
-func generateShortCode(original string) string {
+func GenerateShortCode(original string) string {
 	sum := sha256.Sum256([]byte(original))
 	encoded := base64.URLEncoding.EncodeToString(sum[:])
 	if len(encoded) > 10 {

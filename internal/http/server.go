@@ -3,14 +3,16 @@ package httpserver
 import (
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"url-shortener/internal/analytics"
 	"url-shortener/internal/auth"
-	"url-shortener/internal/urlshortener"
+	"url-shortener/internal/logger"
+	"url-shortener/internal/urlshortener/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 func NewRouter(
-	urlSvc urlshortener.Service,
+	urlSvc service.Service,
 	baseURL string,
 	analyticsSvc analytics.Service,
 	jwtMgr *auth.JWTManager,
@@ -22,8 +24,8 @@ func NewRouter(
 	r.Use(LoggingMiddleware())
 	r.Use(RateLimitMiddleware(rl))
 
-	urlHandler := NewURLHandler(urlSvc, baseURL, analyticsSvc)
-	adminHandler := NewAdminHandler(adminUser, adminPassword, jwtMgr)
+	urlHandler := NewURLHandler(urlSvc, baseURL, analyticsSvc, logger.Log.Named("url-handler"))
+	adminHandler := NewAdminHandler(adminUser, adminPassword, jwtMgr, logger.Log.Named("admin-handler"))
 
 	// Health
 	r.GET("/health", func(c *gin.Context) {

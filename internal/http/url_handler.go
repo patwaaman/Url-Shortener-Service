@@ -5,34 +5,28 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"url-shortener/internal/analytics"
-	"url-shortener/internal/urlshortener"
+	"url-shortener/internal/dto"
+	errconst "url-shortener/internal/error"
+	"url-shortener/internal/urlshortener/service"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
-type shortenReq struct {
-	OriginalURL string `json:"original_url" binding:"required"`
-	CustomAlias string `json:"custom_alias"`
-}
-
-type shortenResp struct {
-	ShortCode   string `json:"short_code"`
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
-}
-
 type URLHandler struct {
-	svc       urlshortener.Service
+	svc       service.Service
 	baseURL   string
 	analytics analytics.Service
+	log       *zap.Logger
 }
 
-func NewURLHandler(svc urlshortener.Service, baseURL string, analyticsSvc analytics.Service) *URLHandler {
-	return &URLHandler{svc: svc, baseURL: baseURL, analytics: analyticsSvc}
+func NewURLHandler(svc service.Service, baseURL string, analyticsSvc analytics.Service, log *zap.Logger) *URLHandler {
+	return &URLHandler{svc: svc, baseURL: baseURL, analytics: analyticsSvc, log: log}
 }
 
 func (h *URLHandler) Shorten(c *gin.Context) {
-	var req shortenReq
+	var req dto.ShortenReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
 		return
@@ -40,7 +34,7 @@ func (h *URLHandler) Shorten(c *gin.Context) {
 
 	u, err := h.svc.Shorten(c.Request.Context(), req.OriginalURL, req.CustomAlias)
 	if err != nil {
-		if err == urlshortener.ErrInvalidURL {
+		if err == errconst.ErrInvalidURL {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid url"})
 			return
 		}
@@ -48,7 +42,7 @@ func (h *URLHandler) Shorten(c *gin.Context) {
 		return
 	}
 
-	resp := shortenResp{
+	resp := dto.ShortenResp{
 		ShortCode:   u.ShortCode,
 		ShortURL:    h.baseURL + "/" + u.ShortCode,
 		OriginalURL: u.OriginalURL,
@@ -60,7 +54,7 @@ func (h *URLHandler) Redirect(c *gin.Context) {
 	code := c.Param("code")
 	u, err := h.svc.Resolve(c.Request.Context(), code)
 	if err != nil {
-		if err == urlshortener.ErrNotFound {
+		if err == errconst.ErrNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
 		}

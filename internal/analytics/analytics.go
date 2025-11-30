@@ -4,28 +4,27 @@ import (
 	"context"
 	"time"
 
-	"gorm.io/gorm"
+	"url-shortener/internal/dto"
 	"url-shortener/internal/model"
+
+	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
-type DailyClicks struct {
-	Date  time.Time `json:"date"`
-	Count uint64    `json:"count"`
-}
-
 type Service interface {
-	GetDailyClicks(ctx context.Context, from, to time.Time) ([]DailyClicks, error)
+	GetDailyClicks(ctx context.Context, from, to time.Time) ([]dto.DailyClicks, error)
 }
 
 type service struct {
-	db *gorm.DB
+	db  *gorm.DB
+	log *zap.Logger
 }
 
-func NewService(db *gorm.DB) Service {
-	return &service{db: db}
+func NewService(db *gorm.DB, log *zap.Logger) Service {
+	return &service{db: db, log: log}
 }
 
-func (s *service) GetDailyClicks(ctx context.Context, from, to time.Time) ([]DailyClicks, error) {
+func (s *service) GetDailyClicks(ctx context.Context, from, to time.Time) ([]dto.DailyClicks, error) {
 	from = truncateDay(from)
 	to = truncateDay(to)
 
@@ -45,9 +44,9 @@ func (s *service) GetDailyClicks(ctx context.Context, from, to time.Time) ([]Dai
 		return nil, err
 	}
 
-	res := make([]DailyClicks, len(rows))
+	res := make([]dto.DailyClicks, len(rows))
 	for i, r := range rows {
-		res[i] = DailyClicks{Date: r.Date, Count: r.Count}
+		res[i] = dto.DailyClicks{Date: r.Date, Count: r.Count}
 	}
 	return res, nil
 }
