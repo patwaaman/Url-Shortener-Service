@@ -1,4 +1,4 @@
-🚀 URL Shortener Service
+## 🚀 URL Shortener Service
 Go + Gin + GORM + PostgreSQL + Redis + JWT + gRPC
 
 A production-ready URL Shortener backend built with scalable architecture, clean layers, and Dockerized deployment.
@@ -27,8 +27,9 @@ This service supports:
 
 * Full Docker setup (app + Postgres + Redis)
 
-📁 Folder Structure
+## 📁 Folder Structure
 
+```text
 url-shortener/
   internal/
     analytics/
@@ -48,9 +49,12 @@ url-shortener/
   docker-compose.yml
   .env.example
   README.md
+```
 
 
-⚙️ Setup & Run Instructions
+
+## ⚙️ Setup & Run Instructions
+
 1️⃣ Clone the repository
 git clone https://github.com/patwaaman/Url-Shortener-Service.git
 cd Url-Shortener-Service
@@ -78,7 +82,7 @@ Unit tests include:
 Rate limiting middleware
 
 
-🔗 REST API Documentation
+## 🔗 REST API Documentation
 Health Check
 curl http://localhost:8080/health
 
@@ -147,7 +151,7 @@ curl -H "Authorization: Bearer <token>" \
   "http://localhost:8080/api/v1/admin/analytics/clicks?from=2025-01-01&to=2025-01-31"
 
 
-📘 Postman Collection
+## 📘 Postman Collection
 
 Import the file:
 
@@ -165,16 +169,18 @@ List URLs
 
 Analytics
 
-🧠 Architectural Overview
+## 🧠 Architectural Overview
+
+```text
                  +-----------------------+
-                 |      REST API     |
-                 |    (Gin server)   |
+                 |       REST API        |
+                 |      (Gin server)     |
                  +-----------+-----------+
                              |
                              v
                  +-----------------------+
                  |     Service Layer     |
-                 |  (Business Logic)     |
+                 |    (Business Logic)   |
                  +-----------+-----------+
                              |
                +-------------+--------------+
@@ -184,6 +190,7 @@ Analytics
      |   PostgreSQL     |           |      Redis       |
      | (Persistent DB)  | <--cache--| (Fast Redirects) |
      +------------------+           +------------------+
+```
 
 🧩 Design Decisions & Trade-offs
 
