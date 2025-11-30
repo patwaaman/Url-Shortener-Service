@@ -32,28 +32,28 @@ This service supports:
 ```text
 url-shortener/
   internal/
-    analytics/
-    auth/
-    cache/
-    config/
-    database/
-    dto/
-    error/
-    http/
-    logger/
-    model/
-    urlshortner/
-  migrations/
+    analytics/     # Click analytics services
+    auth/          # JWT authentication
+    cache/         # Redis layer
+    config/        # Env config loader
+    database/      # PostgreSQL initialization
+    dto/           # Request/response DTOs
+    error/         # Custom error definitions
+    http/          # Gin handlers & middleware
+    logger/        # Custom logger (if extended)
+    model/         # GORM models (URL, ClickStats)
+    urlshortner/   # Core service logic
+  migrations/      # SQL migrations
   main.go
   Dockerfile
   docker-compose.yml
   .env.example
   README.md
+
 ```
 
-
-
 ## ⚙️ Setup & Run Instructions
+```text
 
 1️⃣ Clone the repository
 git clone https://github.com/patwaaman/Url-Shortener-Service.git
@@ -66,7 +66,6 @@ cp .env.example .env
 3️⃣ Run with Docker Compose (recommended)
 docker compose up --build
 
-
 Services available:
 
 Component	URL
@@ -78,96 +77,133 @@ Redis	localhost:6379
 go test ./... -v
 
 Unit tests include:
-
 Rate limiting middleware
+```
 
 
-## 🔗 REST API Documentation
-Health Check
+## 🔗 **REST API Documentation**
+
+---
+
+### 🩺 **Health Check**
+
+```bash
 curl http://localhost:8080/health
+```
 
-1) Shorten URL
+---
 
-POST /api/v1/urls
+## 1️⃣ **Shorten URL**
 
+### **POST `/api/v1/urls`**
+
+```bash
 curl -X POST http://localhost:8080/api/v1/urls \
   -H "Content-Type: application/json" \
   -d '{
     "original_url": "https://google.com",
     "custom_alias": ""
   }'
+```
 
+**Response**
 
-Response:
-
+```json
 {
   "short_code": "abc123",
   "short_url": "http://localhost:8080/abc123",
   "original_url": "https://google.com"
 }
+```
 
-2) Redirect Short URL
+---
 
-GET /:code
+## 2️⃣ **Redirect Short URL**
 
+### **GET `/:code`**
+
+```bash
 curl -v http://localhost:8080/abc123
+```
 
+Redirects with **302 Found**.
 
-Redirects with 302.
+---
 
-3) Admin Login (JWT)
+## 3️⃣ **Admin Login (JWT)**
 
-POST /api/v1/admin/login
+### **POST `/api/v1/admin/login`**
 
+```bash
 curl -X POST http://localhost:8080/api/v1/admin/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"password"}'
+```
 
+**Response**
 
-Response:
-
+```json
 {
   "access_token": "<jwt>",
   "token_type": "Bearer"
 }
+```
 
+Use token for authenticated routes:
 
-Use this token in:
+```
+Authorization: Bearer <jwt>
+```
 
-Authorization: Bearer <token>
+---
 
-4) List URLs (Admin)
+## 4️⃣ **List URLs (Admin Only)**
 
-GET /api/v1/admin/urls?page=1&page_size=20
+### **GET `/api/v1/admin/urls?page=1&page_size=20`**
 
-curl -H "Authorization: Bearer <token>" \
+```bash
+curl -H "Authorization: Bearer <jwt>" \
   "http://localhost:8080/api/v1/admin/urls?page=1&page_size=20"
+```
 
-5) Daily Analytics
+---
 
-GET /api/v1/admin/analytics/clicks?from=&to=
+## 5️⃣ **Daily Analytics**
 
-curl -H "Authorization: Bearer <token>" \
+### **GET `/api/v1/admin/analytics/clicks?from=YYYY-MM-DD&to=YYYY-MM-DD`**
+
+```bash
+curl -H "Authorization: Bearer <jwt>" \
   "http://localhost:8080/api/v1/admin/analytics/clicks?from=2025-01-01&to=2025-01-31"
+```
 
+---
 
-## 📘 Postman Collection
+## 📘 **Postman Collection**
 
-Import the file:
+You can test all API endpoints using the included Postman collection.
 
+### 👉 Import the file:
+
+```
 URL-Shortener-Service.postman_collection.json
+```
 
-Includes:
+### The collection includes:
 
-Shorten URL
+- **Shorten URL**
+- **Redirect Short URL**
+- **Admin Login (JWT)**
+- **List Shortened URLs (Admin)**
+- **Daily Click Analytics**
 
-Redirect
+Each request comes pre-configured with:
 
-Admin login
+- Correct HTTP method  
+- Sample request body  
+- Auth header (for admin routes)  
+---
 
-List URLs
-
-Analytics
 
 ## 🧠 Architectural Overview
 
@@ -192,58 +228,54 @@ Analytics
      +------------------+           +------------------+
 ```
 
-🧩 Design Decisions & Trade-offs
+## 🧩 **Design Decisions & Trade-offs**
 
-1. PostgreSQL as Source of Truth
+---
 
-Strong consistency
+### **1. PostgreSQL as Source of Truth**
 
-Relational structure supports analytics
+- **Strong consistency**
+- **Relational model supports analytics**
+- **Durable for long-term (5+ years)**
 
-Durable (5+ year requirement)
+*Trade-off:* Slower than Redis → solved using caching.
 
-Trade-off: Slower than Redis → solved via caching.
+---
 
+### **2. Redis as Read-Through Cache**
 
-2. Redis as Read-Through Cache
+- **Redirects are extremely frequent**
+- **Redis reduces DB load by 80–95%**
+- **TTL keeps cache fresh**
 
-Redirects are extremely frequent
+*Trade-off:* Requires cache invalidation when URLs are deleted (not needed in this assignment).
 
-Redis reduces DB load by 80–95%
+---
 
-TTL ensures periodic refresh
+### **3. Deterministic Short Codes (Idempotent)**
 
-Trade-off: Cache invalidation needed when deleting URLs (not required here).
+- **SHA256(original URL) → base62 → first 10 chars**
+- **Same URL always returns the same short code**
+- **Extremely low collision probability**
 
+*Trade-off:* Codes are not sequential (unlike Snowflake or ULID).
 
-3. Deterministic Short Codes (Idempotent)
+---
 
-Using SHA256(originalURL) → base62 → first 10 chars
+### **4. Rate Limiting (Per-IP Token Bucket)**
 
-Same URL always returns same code
+- **Protects API from abuse & DDoS**
+- **Prevents brute-force crawling of URLs**
+- **Simple, in-memory, and fast**
 
-Very low collision probability
+*Trade-off:* Not distributed across instances — but can be extended using Redis.
 
-Trade-off: Not sequential (Snowflake style).
+---
 
+### **5. JWT Authentication for Admin Routes**
 
-4. Rate Limiting (Per-IP Token Bucket)
+- **Stateless and lightweight**
+- **Works well with load balancers**
+- **Easy integration with admin dashboards**
 
-Protects public API from abuse
-
-Prevents brute-force crawling
-
-Lightweight (in-memory)
-
-Trade-off: Not distributed across multiple instances — but can be extended using Redis.
-
-
-5. JWT Authentication for Admin
-
-Stateless, minimal overhead
-
-Works well with load balancers
-
-Easy to integrate with admin dashboards
-
-Trade-off: Requires token rotation support for high security (optional).
+*Trade-off:* Requires token rotation and secret management for high security (optional here).
