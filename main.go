@@ -1,0 +1,83 @@
+package main
+
+import (
+	"context"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"url-shortener/internal/analytics"
+	"url-shortener/internal/auth"
+	"url-shortener/internal/cache"
+	"url-shortener/internal/config"
+	"url-shortener/internal/database"
+	httpserver "url-shortener/internal/http"
+	"url-shortener/internal/logger"
+	"url-shortener/internal/model"
+	"url-shortener/internal/urlshortener/repository"
+	"url-shortener/internal/urlshortener/service"
+
+	"go.uber.org/zap"
+)
+
+func main() {
+	cfg := config.Load()
+
+	logger.Init(cfg.AppEnv)
+	logger.Log.Info("logger initialized",
+		zap.String("env", cfg.AppEnv),
+		zap.String("database_url", cfg.DatabaseURL),
+	)
+
+	db := database.NewPostgres(cfg.DatabaseURL)
+	redisClient := cache.NewRedis(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
+	defer redisClient.Close()
+
+	// AutoMigrate
+	if err := db.AutoMigrate(&model.URL{}, &model.ClickStat{}); err != nil {
+		log.Fatalf("failed to migrate: %v", err)
+	}
+
+	urlRepo := repository.NewRepository(db, logger.Log.Named("url-repo"))
+	urlSvc := service.NewService(urlRepo, redisClient, logger.Log.Named("url-service"))
+	analyticsSvc := analytics.NewService(db, logger.Log.Named("analytics-service"))
+	jwtMgr := auth.NewJWTManager(cfg.AdminJWTSecret, 24*time.Hour, logger.Log.Named("auth"))
+
+	rl := httpserver.NewRateLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
+	router := httpserver.NewRouter(urlSvc, cfg.BaseURL, analyticsSvc, jwtMgr, cfg.AdminUser, cfg.AdminPassword, rl)
+
+	httpSrv := &http.Server{
+		Addr:         ":" + cfg.HTTPPort,
+		Handler:      router,
+		ReadTimeout:  cfg.ReadTimeout,
+		WriteTimeout: cfg.WriteTimeout,
+		IdleTimeout:  cfg.IdleTimeout,
+	}
+
+	// Start HTTP
+	go func() {
+		log.Printf("HTTP server listening on :%s", cfg.HTTPPort)
+		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("http server error: %v", err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("shutting down servers...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := httpSrv.Shutdown(ctx); err != nil {
+		log.Printf("http shutdown error: %v", err)
+	}
+
+	log.Println("servers stopped")
+}

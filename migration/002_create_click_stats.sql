@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS click_stats (
+    id BIGSERIAL PRIMARY KEY,
+    url_id BIGINT NOT NULL REFERENCES urls(id),
+    date DATE NOT NULL,
+    count BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (url_id, date)
+);
