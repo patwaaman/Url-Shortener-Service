@@ -10,16 +10,6 @@ import (
 	"url-shortener/internal/urlshortener"
 )
 
-type URLHandler struct {
-	svc       urlshortener.Service
-	baseURL   string
-	analytics analytics.Service
-}
-
-func NewURLHandler(svc urlshortener.Service, baseURL string, analyticsSvc analytics.Service) *URLHandler {
-	return &URLHandler{svc: svc, baseURL: baseURL, analytics: analyticsSvc}
-}
-
 type shortenReq struct {
 	OriginalURL string `json:"original_url" binding:"required"`
 	CustomAlias string `json:"custom_alias"`
@@ -29,6 +19,16 @@ type shortenResp struct {
 	ShortCode   string `json:"short_code"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
+}
+
+type URLHandler struct {
+	svc       urlshortener.Service
+	baseURL   string
+	analytics analytics.Service
+}
+
+func NewURLHandler(svc urlshortener.Service, baseURL string, analyticsSvc analytics.Service) *URLHandler {
+	return &URLHandler{svc: svc, baseURL: baseURL, analytics: analyticsSvc}
 }
 
 func (h *URLHandler) Shorten(c *gin.Context) {

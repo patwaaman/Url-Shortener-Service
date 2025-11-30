@@ -7,6 +7,11 @@ import (
 	"url-shortener/internal/auth"
 )
 
+type loginReq struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
 type AdminHandler struct {
 	adminUser     string
 	adminPassword string
@@ -21,10 +26,6 @@ func NewAdminHandler(adminUser, adminPassword string, jwtMgr *auth.JWTManager) *
 	}
 }
 
-type loginReq struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-}
 
 func (h *AdminHandler) Login(c *gin.Context) {
 	var req loginReq

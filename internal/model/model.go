@@ -22,6 +22,6 @@ type ClickStat struct {
 	URLID     uint      `gorm:"index;not null"`
 	Date      time.Time `gorm:"index;not null"` // date only (truncate to day)
 	Count     uint64    `gorm:"not null;default:0"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

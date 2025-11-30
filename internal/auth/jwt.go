@@ -11,16 +11,16 @@ type JWTManager struct {
 	tokenDuration time.Duration
 }
 
+type AdminClaims struct {
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
 func NewJWTManager(secret string, duration time.Duration) *JWTManager {
 	return &JWTManager{
 		secretKey:     secret,
 		tokenDuration: duration,
 	}
-}
-
-type AdminClaims struct {
-	Username string `json:"username"`
-	jwt.RegisteredClaims
 }
 
 func (m *JWTManager) GenerateAdminToken(username string) (string, error) {

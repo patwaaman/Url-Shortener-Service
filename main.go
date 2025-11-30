@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	// "net/url"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,7 +15,11 @@ import (
 	"url-shortener/internal/config"
 	"url-shortener/internal/database"
 	httpserver "url-shortener/internal/http"
+	"url-shortener/internal/logger"
+	"url-shortener/internal/model"
 	urlshortner "url-shortener/internal/urlshortener"
+
+	"go.uber.org/zap"
 	// grpcserver "url-shortener/internal/grpc"
 	// pb "url-shortener/proto"
 	// "google.golang.org/grpc"
@@ -25,14 +28,20 @@ import (
 func main() {
 	cfg := config.Load()
 
+	logger.Init(cfg.AppEnv)
+	logger.Log.Info("logger initialized",
+		zap.String("env", cfg.AppEnv),
+		zap.String("database_url", cfg.DatabaseURL),
+	)
+
 	db := database.NewPostgres(cfg.DatabaseURL)
 	redisClient := cache.NewRedis(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
 	defer redisClient.Close()
 
-	// // AutoMigrate
-	// if err := db.AutoMigrate(&url.URL{}, &url.ClickStat{}); err != nil {
-	// 	log.Fatalf("failed to migrate: %v", err)
-	// }
+	// AutoMigrate
+	if err := db.AutoMigrate(&model.URL{}, &model.ClickStat{}); err != nil {
+		log.Fatalf("failed to migrate: %v", err)
+	}
 
 	urlRepo := urlshortner.NewRepository(db)
 	urlSvc := urlshortner.NewService(urlRepo, redisClient)
@@ -92,4 +101,3 @@ func main() {
 
 	log.Println("servers stopped")
 }
-
